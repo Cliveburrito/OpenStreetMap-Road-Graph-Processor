@@ -16,7 +16,7 @@ Geometric Precision: Calculations account for the Earth's curvature using the Ha
 
 Visual Integration: Automatically generates and opens a Google Maps URL to visualize the resulting path.
 
-Interactive CLI: A robust command-line interface for real-time graph manipulation
+Interactive CLI: A command-line interface for real-time graph manipulation.
 
 ## Weighting Logic
 The "distance" between nodes isn't just physical meters; it accounts for road types:
