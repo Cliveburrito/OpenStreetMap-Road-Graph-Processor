@@ -21,7 +21,11 @@ Interactive CLI: A robust command-line interface for real-time graph manipulatio
 ## Weighting Logic
 The "distance" between nodes isn't just physical meters; it accounts for road types:
   Cost = Haversine(u, v) * HighwayFactor
+  
   Motorways: 0.5x (Faster priority)
+  
   Residential: 1.0x (Standard)
+  
   Service Roads: 1.5x (Slowest priority)
+  
 To ensure A* remains optimal, the heuristic uses the lowest possible highway factor (0.5). This ensures that the algorithm never overestimates the cost to the goal, satisfying the admissibility criteria for finding the shortest path.
