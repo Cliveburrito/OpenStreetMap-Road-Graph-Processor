@@ -17,3 +17,6 @@ Geometric Precision: Calculations account for the Earth's curvature using the Ha
 Visual Integration: Automatically generates and opens a Google Maps URL to visualize the resulting path.
 
 Interactive CLI: A robust command-line interface for real-time graph manipulation
+
+##Weighting Logic
+The "distance" between nodes isn't just physical meters; it accounts for road types:$$Cost = Haversine(u, v) \times HighwayFactor$$Motorways: $0.5\times$ (Faster priority)Residential: $1.0\times$ (Standard)Service Roads: $1.5\times$ (Slowest priority)Heuristic AdmissibilityTo ensure A* remains optimal, the heuristic uses the lowest possible highway factor (0.5). This ensures that the algorithm never overestimates the cost to the goal, satisfying the admissibility criteria for finding the shortest path.
