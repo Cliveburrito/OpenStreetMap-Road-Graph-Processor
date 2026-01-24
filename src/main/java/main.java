@@ -7,7 +7,6 @@ import java.net.URI;
 public class main {
     public static void main(String[] args) {
         Scanner scanner = new Scanner(System.in);
-        String filepath = "C:\\Users\\Μitsious4\\Downloads\\map.osm";
         Graph graph = new Graph();
 
         while(true) {
@@ -16,6 +15,8 @@ public class main {
                     -c : Compact Graph
                     -p <sid> <eid> : Estimate the shortest path between start
                                      node with <sid> and end node with <eid>
+                    -a <sid> <eid> : Estimate the shortest path between start
+                                     node with <sid> and end node with <eid> via A* heuristic
                     -b <sid> : Print bfs starting from node with <sid>
                     -d <sid> : Print dfs starting from node with <sid>
                     -r : Generate two random node IDs
@@ -33,8 +34,8 @@ public class main {
                         System.out.println("Invalid input. -i <filename>.");
                         continue;
                     }
-                    //String path = tokens[1];
-                    String path = "C:\\Users\\Μitsious4\\Downloads\\map.osm";
+
+                    String path = tokens[1];
 
                     File f = new File(path);
                     if (!f.exists() || !f.isFile() || !f.canRead()) {
@@ -68,50 +69,21 @@ public class main {
                     }
                     long sourceID = Long.parseLong(tokens[1]);
                     long destinationID = Long.parseLong(tokens[2]);
+                    long startTime = System.nanoTime();
                     List<Vertex> shortestPath = graph.Dijkstra(sourceID, destinationID);
+                    long endTime = System.nanoTime();
 
                     if (shortestPath.isEmpty()) {
                         System.out.println("No path found.");
                         continue;
                     }
 
-                    // --- NEW URL GENERATION LOGIC ---
-                    StringBuilder sb = new StringBuilder();
-                    sb.append("https://www.google.com/maps/dir");
+                    System.out.printf("Dijkstra found path in %.2f ms\n", (endTime - startTime) / 1_000_000.0);
 
-                    // 1. Add Start Node
-                    Vertex start = shortestPath.get(0);
-                    sb.append("/").append(start.getLatitude()).append(",").append(start.getLongitude());
+                    openMapInBrowser(shortestPath);
+                }
 
-                    // 2. Add intermediate nodes (Sampling to prevent URL overflow)
-                    // We step by 10 (or 20) to keep the URL short.
-                    int step = 3;
-                    for(int i = 1; i < shortestPath.size() - 1; i++) {
-                        if (i % step == 0) {
-                            Vertex v = shortestPath.get(i);
-                            sb.append("/").append(v.getLatitude()).append(",").append(v.getLongitude());
-                        }
-                    }
-
-                    // 3. Add End Node
-                    Vertex end = shortestPath.get(shortestPath.size() - 1);
-                    sb.append("/").append(end.getLatitude()).append(",").append(end.getLongitude());
-
-
-                    String url = sb.toString();
-                    // --------------------------------
-
-                    if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
-                        try {
-                            Desktop.getDesktop().browse(new URI(url));
-                            System.out.println("Map opened in browser.");
-                        } catch (Exception e) {
-                            System.out.println("Failed to open browser.");
-                        }
-                    } else {
-                        System.out.println("Url: " + url);
-                    }
-                }                case "-b" -> {
+                case "-b" -> {
                     if (tokens.length != 2) {
                         System.out.println("Invalid input. -i <sid>.");
                         continue;
@@ -124,6 +96,30 @@ public class main {
                         System.out.println(l);
                     }
                 }
+
+                case "-a" -> {
+                    if (tokens.length != 3) {
+                        System.out.println("Invalid input. Use: -a <sid> <eid>");
+                        continue;
+                    }
+                    long sourceID = Long.parseLong(tokens[1]);
+                    long destinationID = Long.parseLong(tokens[2]);
+
+                    // Benchmark Start
+                    long startTime = System.nanoTime();
+                    List<Vertex> shortestPath = graph.AStar(sourceID, destinationID);
+                    long endTime = System.nanoTime();
+
+                    if (shortestPath.isEmpty()) {
+                        System.out.println("No path found via A*.");
+                        continue;
+                    }
+
+                    System.out.printf("A* found path in %.2f ms\n", (endTime - startTime) / 1_000_000.0);
+
+                    openMapInBrowser(shortestPath);
+                }
+
                 case "-d" -> {
                     if (tokens.length != 2) {
                         System.out.println("Invalid input. -i <sid>.");
@@ -142,7 +138,6 @@ public class main {
                     return;
                 }
                 case "-r" -> {
-                    // Check if graph is loaded
                     if (graph.getVertexCount() == 0) {
                         System.out.println("Graph is empty. Load a file first (-i).");
                         continue;
@@ -151,11 +146,9 @@ public class main {
                     java.util.Random dice = new java.util.Random();
                     int maxIndex = graph.getVertexCount(); // size of the list
 
-                    // Generate two random INDICES (int) within the list size
                     int index1 = dice.nextInt(maxIndex);
                     int index2 = dice.nextInt(maxIndex);
 
-                    // Retrieve the actual Vertex objects
                     Vertex v1 = graph.getVertex(index1);
                     Vertex v2 = graph.getVertex(index2);
 
@@ -164,10 +157,33 @@ public class main {
                     System.out.println("------------------------------------------------");
                     System.out.println("Test Command: -p " + v1.getId() + " " + v2.getId());
                 }
-                default -> {
-                    System.out.println("Are you NUTS?:??? wtf are you typing, try again assholee!@@2!");
-                }
+                default -> System.out.println("Are you NUTS?:??? wtf are you typing!");
             }
+        }
+    }
+
+    private static void openMapInBrowser(List<Vertex> shortestPath) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("https://www.google.com/maps/dir");
+
+        int step = Math.max(1, shortestPath.size() / 20);
+        for (int i = 0; i < shortestPath.size(); i++) {
+            if (i == 0 || i == shortestPath.size() - 1 || i % step == 0) {
+                Vertex v = shortestPath.get(i);
+                sb.append("/").append(v.getLatitude()).append(",").append(v.getLongitude());
+            }
+        }
+
+        String url = sb.toString();
+        if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
+            try {
+                Desktop.getDesktop().browse(new URI(url));
+                System.out.println("Map opened in browser.");
+            } catch (Exception e) {
+                System.out.println("Failed to open browser.");
+            }
+        } else {
+            System.out.println("URL: " + url);
         }
     }
 }

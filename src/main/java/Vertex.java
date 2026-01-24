@@ -4,14 +4,14 @@ import java.util.List;
 
 public class Vertex {
 
-    private final long id;           // unique identifier (unsigned long in C++)
-    private final double latitude;   // geographic latitude
-    private final double longitude;  // geographic longitude
+    private final long id;
+    private final double latitude;
+    private final double longitude;
 
     private final List<Edge> edges;  // outgoing edges from this vertex
 
     /**
-     * Constructor with id, latitude, and longitude.
+     * Constructor with id, latitude, and longitude
      */
     public Vertex(long id, double latitude, double longitude) {
         this.id = id;
@@ -21,8 +21,8 @@ public class Vertex {
     }
 
     /**
-     * Copy constructor (equivalent to C++: Vertex(const Vertex& other)).
-     * Performs a shallow copy of the edges list.
+     * Copy constructor
+     * Performs a shallow copy of the edges list
      */
     public Vertex(Vertex other) {
         this.id = other.id;
@@ -32,7 +32,7 @@ public class Vertex {
     }
 
     /**
-     * Adds an outgoing edge.
+     * Adds an outgoing edge
      */
     public void addEdge(Edge edge) {
         if (edge == null) {
@@ -42,14 +42,14 @@ public class Vertex {
     }
 
     /**
-     * Removes a specific edge. Returns true if it was found and removed.
+     * Removes a specific edge. Returns true if it was found and removed
      */
     public boolean removeEdge(Edge edge) {
         return edges.remove(edge);
     }
 
     /**
-     * Returns an unmodifiable list of edges to prevent external modification.
+     * Returns an unmodifiable list of edges to prevent external modification
      */
     public List<Edge> getEdges() {
         return edges;

@@ -70,13 +70,6 @@ public class Graph {
         }
     }
 
-    /**
-     * High-level method that:
-     *  - Parses the XML into a DOM Document.
-     *  - Parses all <node> elements into Vertex objects.
-     *  - Parses all <way> elements into Edge objects.
-     *  - Removes isolated vertices.
-     */
     private void loadFromOSM(String osmFilePath) throws Exception {
         File file = new File(osmFilePath);
         DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
@@ -102,7 +95,7 @@ public class Graph {
 
 
     /**
-     * Parses all <node> elements in the OSM document and creates Vertex objects.
+     * Parses all node elements in the OSM document and creates Vertex objects.
      * Only the attributes id, lat and lon are used; any other node information is ignored.
      */
     private void parseNodes(Document doc) {
@@ -183,12 +176,12 @@ public class Graph {
                 }
             }
 
-            // If there's no highway tag, this way is not a road – ignore it.
+            // If there's no highway tag, this way is not a road so ignore it
             if (highwayValue == null) {
                 continue;
             }
 
-            // Convert the highway string to our enum. If it fails, ignore this way.
+            // Convert the highway string to our enum, if it fails ignore this way
             HighwayType type = highwayTypeFromString(highwayValue);
             if (type == null) {
                 continue;
@@ -206,14 +199,14 @@ public class Graph {
                 Integer fromIndexObj = map.get(fromId);
                 Integer toIndexObj   = map.get(toId);
                 if (fromIndexObj == null || toIndexObj == null) {
-                    // Some OSM files might reference nodes that are not in the file – just skip them.
+                    // Some OSM files might reference nodes that are not in the file, just skip them
                     continue;
                 }
 
                 Vertex fromVertex = vertices.get(fromIndexObj);
                 Vertex toVertex   = vertices.get(toIndexObj);
 
-                // Forward edge: fromId -> toId
+                // Forward edge fromId -> toId
                 Edge forward = new Edge(fromId, toId, 0.0);
                 forward.setHighwayType(type);
                 double forwardWeight = computeFinalWeight(forward);
@@ -242,13 +235,11 @@ public class Graph {
             return null;
         }
 
-        // Example:
+        // eg:
         //  "residential"   -> "RESIDENTIAL"
         //  "living_street" -> "LIVING_STREET"
         String normalized = highwayValue.toUpperCase(Locale.ROOT);
 
-        // Just in case some files use '-' instead of '_' (rare but safe to handle)
-        normalized = normalized.replace('-', '_');
 
         try {
             return HighwayType.valueOf(normalized);
@@ -261,12 +252,12 @@ public class Graph {
     /**
      * Determines whether the given oneway string represents a one-way street.
      * According to the assignment:
-     *  - "yes" or "1" => one-way (true)
-     *  - "no" or missing => two-way (false)
+     *  "yes" or "1" => one-way (true)
+     *  "no" or missing => two-way (false)
      */
     private boolean isOneWay(String onewayValue) {
         if (onewayValue == null) {
-            // Default when oneway is missing: two-way
+            // Default when oneway is missing is two-way
             return false;
         }
 
@@ -277,11 +268,8 @@ public class Graph {
     }
 
     /**
-     * Removes all vertices that are completely isolated:
-     *   - no outgoing edges (out-degree == 0)
-     *   - no incoming edges (in-degree == 0)
-     * <p>
-     * This should be called once after the entire graph has been built from the OSM file.
+     * Removes all vertices that are completely isolated
+     * This should be called once after the entire graph has been built from the OSM file
      */
     private void removeIsolatedVertices() {
         int n = vertices.size();
@@ -297,7 +285,7 @@ public class Graph {
             }
         }
 
-        // Collect isolated vertices (no in, no out)
+        // Collect isolated vertices
         List<Long> toDelete = new ArrayList<>();
         for (int i = 0; i < n; i++) {
             Vertex v = vertices.get(i);
@@ -306,7 +294,7 @@ public class Graph {
             }
         }
 
-        // Now delete them with a cheap method
+        // Now delete
         for (Long id : toDelete) {
             deleteIsolatedVertex(id);
         }
@@ -348,21 +336,17 @@ public class Graph {
 
 
     public void deleteVertex(long vertexID) {
-        // 1. Check if the vertex exists
         if (!map.containsKey(vertexID)) {
             System.out.println("Vertex doesn't exist!");
             return;
         }
 
-        // 2. Remove all edges that have this vertex as DESTINATION
-        //    (i.e. all incoming edges to this vertex)
+        // remove all edges that have this vertex as DESTINATION
         for (Vertex v : vertices) {
-            // assumes getEdges() returns a mutable List<Edge>
             v.getEdges().removeIf(e -> e.getDestinationId() == vertexID);
 
         }
 
-        // 3. Remove the vertex itself using swap-with-last to keep indices valid
         int indexToRemove = map.get(vertexID);
         int lastIndex = vertices.size() - 1;
 
@@ -412,15 +396,15 @@ public class Graph {
 
         distance[map.get(start)] = 0;
 
-        PriorityQueue<myNode> queue = new PriorityQueue<>();
-        queue.offer(new myNode(startIndex, 0));
+        PriorityQueue<SearchNode> queue = new PriorityQueue<>();
+        queue.offer(new SearchNode(startIndex, 0, 0));
 
         while(!queue.isEmpty()) {
-            myNode current = queue.poll();
+            SearchNode current = queue.poll();
             int u = current.index;
 
             // If this entry is stale (older distance), skip it
-            if (current.distance > distance[u]) {
+            if (current.gScore > distance[u]) {
                 continue;
             }
 
@@ -430,7 +414,7 @@ public class Graph {
 
             isVisited[u] = true;
 
-            // If we reach the destination we are intrested in, we don't care about the other paths to other nodes:)
+            // If we reach the destination we are interested in, we don't care about the other paths to other nodes:)
             if (u == endIndex) {
                 break;
             }
@@ -444,7 +428,7 @@ public class Graph {
                 if(distance[v] > newDistance) {
                     distance[v] = newDistance;
                     parents[v] = u;
-                    queue.offer(new myNode(v, newDistance));
+                    queue.offer(new SearchNode(v, newDistance, newDistance));
                 }
                 if(distance[v] == newDistance) {
                     parents[v] = vertices.get(parents[v]).getId() > vertices.get(u).getId() ? u : parents[v];
@@ -536,7 +520,7 @@ public class Graph {
     public void compress() {
         boolean changed;
 
-        // 1. Build the "Incoming Edge Map" LOCALLY.
+        // Build the "Incoming Edge Map" LOCALLY.
         // This takes O(V+E) time once.
         // Key = Vertex ID, Value = List of IDs pointing to it.
         Map<Long, List<Long>> incomingMap = new HashMap<>();
@@ -556,7 +540,7 @@ public class Graph {
                 long id = v.getId();
                 if (!map.containsKey(id)) continue; // Already deleted
 
-                // 2. Lookup is now O(1) using the local map
+                // Lookup is now O(1) using the local map
                 int outDeg = v.getEdges().size();
                 List<Long> incomingList = incomingMap.get(id);
                 int inDeg = (incomingList == null) ? 0 : incomingList.size();
@@ -581,17 +565,13 @@ public class Graph {
      * <p>
      *    U -> V -> W   becomes   U -> W
      * <p>
-     * Preconditions (ideally checked by the caller):
-     *   - V has exactly 1 incoming and 1 outgoing edge.
+     * V must have exactly 1 incoming and 1 outgoing edge
      * <p>
      * This method:
      *   1. Finds the unique incoming edge U -> V.
      *   2. Uses the existing outgoing edge V -> W.
      *   3. Replaces U -> V with U -> W, updating the distance.
      *   4. Deletes the intermediate vertex V from the graph.
-     *
-     * @param middle the intermediate vertex V
-     * @return true if the graph was actually modified, false otherwise
      */
     // Add the Map parameter
     private boolean oneWayStreetReduction(Vertex middle, Map<Long, List<Long>> incomingMap) {
@@ -602,7 +582,7 @@ public class Graph {
         Edge outgoing = middle.getEdges().getFirst();
         long destId = outgoing.getDestinationId(); // W
 
-        // FAST LOOKUP: Find U (the node pointing to Middle) using the map
+        // Find U (the node pointing to middle) using the map
         List<Long> sources = incomingMap.get(middleId);
         if (sources == null || sources.size() != 1) return false;
 
@@ -623,29 +603,26 @@ public class Graph {
         // ... Calculate new weight ...
         double newDistance = incoming.getDistance() + outgoing.getDistance();
 
-        // --- CRITICAL: UPDATE THE MAP ---
+        // update the map, IMPORTANT
 
-        // 1. "U" no longer points to "Middle"
-        // We don't need to update incomingMap.get(middleId) because Middle is being deleted anyway.
+        // U no longer points to middle
+        // We don't need to update incomingMap.get(middleId) because middle is being deleted anyway
 
-        // 2. "U" now points to "W" (destId)
+        // U now points to W (destId)
         // Update the edge object
         incoming.setDestinationId(destId);
         incoming.setDistance(newDistance);
 
-        // Update the map for W: Add U to its incoming list
+        // Update the map for W, add U to its incoming list
         incomingMap.computeIfAbsent(destId, _ -> new ArrayList<>()).add(sourceId);
 
-        // 3. "Middle" no longer points to "W"
-        // Remove Middle from W's incoming list
+        // Middle no longer points to W
+        // Remove middle from W's incoming list
         List<Long> destIncoming = incomingMap.get(destId);
         if(destIncoming != null) {
             destIncoming.remove(middleId);
         }
-
-        // ---------------------------------
-
-        deleteVertex(middleId); // Your existing delete method
+        deleteVertex(middleId);
         return true;
     }
 
@@ -668,15 +645,14 @@ public class Graph {
      *        B -> V -> A with B -> A
      *      updating the distances accordingly.
      *   5. Deletes V from the graph.
-     *
-     * @param middle the intermediate vertex V
-     * @return true if the graph was actually modified, false otherwise
      */
     private boolean twoWayStreetReduction(Vertex middle, Map<Long, List<Long>> incomingMap) {
         long middleId = middle.getId();
 
-        // 1. Verify Outgoing Edges from Middle (V -> A, V -> B)
-        if (middle.getEdges().size() != 2) return false;
+        // Verify Outgoing Edges from Middle (V -> A, V -> B)
+        if (middle.getEdges().size() != 2) {
+            return false;
+        }
 
         Edge out1 = middle.getEdges().get(0);
         Edge out2 = middle.getEdges().get(1);
@@ -684,11 +660,15 @@ public class Graph {
         long neighborAId = out1.getDestinationId();
         long neighborBId = out2.getDestinationId();
 
-        if (neighborAId == neighborBId) return false; // Not a line, but a multi-edge loop
+        if (neighborAId == neighborBId) {
+            return false; // Not a line but a multi edge loop
+        }
 
-        // 2. Verify Incoming Edges to Middle (A -> V, B -> V) using the MAP
+        // Verify Incoming Edges to Middle (A -> V, B -> V) using the MAP
         List<Long> sources = incomingMap.get(middleId);
-        if (sources == null || sources.size() != 2) return false;
+        if (sources == null || sources.size() != 2) {
+            return false;
+        }
 
         // Check if the sources are actually A and B
         boolean aPointsToMiddle = sources.contains(neighborAId);
@@ -700,11 +680,11 @@ public class Graph {
             return false;
         }
 
-        // 3. Get the actual Vertex objects for A and B
+        // Get the actual Vertex objects for A and B
         Vertex neighborA = vertices.get(map.get(neighborAId));
         Vertex neighborB = vertices.get(map.get(neighborBId));
 
-        // 4. Find the specific Edge objects: A -> V and B -> V
+        // Find the specific Edge objects: A -> V and B -> V
         Edge inFromA = null;
         for (Edge e : neighborA.getEdges()) {
             if (e.getDestinationId() == middleId) {
@@ -721,23 +701,23 @@ public class Graph {
             }
         }
 
-        if (inFromA == null || inFromB == null) return false; // Should satisfy by map check, but safety first
+        if (inFromA == null || inFromB == null) {
+            return false; // Should satisfy by map check, but safety first :)))
+        }
 
-        // 5. Determine which outgoing edge goes where
+        // Determine which outgoing edge goes where
         // outToA is V -> A, outToB is V -> B
         Edge outToA = (out1.getDestinationId() == neighborAId) ? out1 : out2;
         Edge outToB = (out1.getDestinationId() == neighborBId) ? out1 : out2;
 
-        // 6. Calculate new distances
+        // Calculate new distances
         // New A -> B = (A -> V) + (V -> B)
         double distAtoB = inFromA.getDistance() + outToB.getDistance();
 
         // New B -> A = (B -> V) + (V -> A)
         double distBtoA = inFromB.getDistance() + outToA.getDistance();
 
-        // ---------------------------------------------------------
-        // 7. CRITICAL: Update the Structure and the Map
-        // ---------------------------------------------------------
+        // CRITICAL: Update the Structure and the Map
 
         // --- UPDATE A -> B ---
         inFromA.setDestinationId(neighborBId);
@@ -762,35 +742,135 @@ public class Graph {
         // Add B to A's incoming list
         incomingMap.computeIfAbsent(neighborAId, _ -> new ArrayList<>()).add(neighborBId);
 
-        // ---------------------------------------------------------
 
-        // 8. Delete the middle vertex
+        // finally delete the middle vertex
         deleteVertex(middleId);
 
         return true;
     }
 
+    /**
+     * A* Star Search Algorithm
+     * <p>
+     *   It works just like Dijkstra's but instead of just taking in account the
+     *      distance of the current node to the starting one it adds
+     *      another score which is the distance (haversine) of the current node
+     *      to the target node f(n) = h(n) + g(n)
+     *      h(n) -> distance from the starting node
+     *      g(n) -> distance to the finish node.
+     * </p>
+     */
+    public List<Vertex> AStar(long startId, long endId) {
+        Integer startIdx = map.get(startId);
+        Integer endIdx = map.get(endId);
+
+        if (startIdx == null || endIdx == null) return Collections.emptyList();
+
+        int n = vertices.size();
+
+        Vertex goalVertex = vertices.get(map.get(endId));
+
+        // distance[i] stores the shortest actual distance found from 'start' to 'i'
+        double[] distance = new double[n];
+        int[] parents = new int[n];
+        boolean[] visited = new boolean[n];
+
+        Arrays.fill(distance, Double.POSITIVE_INFINITY);
+        Arrays.fill(parents, -1);
+
+        distance[startIdx] = 0.0;
+
+        // Initial score = 0 distance + estimated distance to goal
+        double initialScore = calculateHeuristic(vertices.get(startIdx), goalVertex);
+
+        PriorityQueue<SearchNode> pq = new PriorityQueue<>();
+        pq.offer(new SearchNode(startIdx, 0.0, initialScore));
+
+        while (!pq.isEmpty()) {
+            SearchNode current = pq.poll();
+            int u = current.index;
+
+            // If we reached the goal index, we are done
+            if (u == endIdx) {
+                break;
+            }
+
+            // Skip if we've already found a better path for this node
+            if (visited[u]) {
+                continue;
+            }
+            visited[u] = true;
+
+            for (Edge edge : vertices.get(u).getEdges()) {
+                Integer v = map.get(edge.getDestinationId());
+                if (v == null || visited[v]) {
+                    continue;
+                }
+
+                // Calculate the new distance from start to neighbor 'v'
+                double newDistance = distance[u] + edge.getDistance();
+
+                if (newDistance < distance[v]) {
+                    distance[v] = newDistance;
+                    parents[v] = u;
+
+                    // The A* Score: Actual distance + Heuristic
+                    double h = calculateHeuristic(vertices.get(v), goalVertex);
+                    double score = newDistance + h;
+
+                    pq.offer(new SearchNode(v, newDistance, score));
+                }
+            }
+        }
+
+        return reconstructPath(parents, endIdx);
+    }
+
+    /**
+     * Heuristic function is the straight-line distance between two points
+     * This is acceptable because the shortest path between two points is a line
+     */
+    private double calculateHeuristic(Vertex v1, Vertex v2) {
+        return calculateRawHaversine(v1.getLatitude(), v1.getLongitude(),
+                v2.getLatitude(), v2.getLongitude());
+    }
+
+    private List<Vertex> reconstructPath(int[] parents, int endIdx) {
+        List<Vertex> path = new ArrayList<>();
+        int curr = endIdx;
+        while (curr != -1) {
+            path.add(vertices.get(curr));
+            curr = parents[curr];
+        }
+        Collections.reverse(path);
+        return path.isEmpty() || parents[endIdx] == -1 && vertices.get(endIdx).getId() != vertices.getFirst().getId() ? new ArrayList<>() : path;
+    }
+
+    private double calculateRawHaversine(double lat1, double lon1, double lat2, double lon2) {
+        double latitude1 = lat1 * (Math.PI / 180);
+        double latitude2 = lat2 * (Math.PI / 180);
+        double longitude1 = lon1 * (Math.PI / 180);
+        double longitude2 = lon2 * (Math.PI / 180);
+
+        double latitudeDiff = latitude1 - latitude2;
+        double longitudeDiff = longitude1 - longitude2;
+
+        double a = Math.pow(Math.sin(latitudeDiff / 2), 2)
+                + Math.cos(latitude1) * Math.cos(latitude2)
+                * Math.pow(Math.sin(longitudeDiff / 2), 2);
+
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+        return R * c;
+    }
 
     private double computeHaversineDistance(Edge edge) {
         Vertex src = vertices.get(map.get(edge.getSourceId()));
         Vertex dst = vertices.get(map.get(edge.getDestinationId()));
 
-        double latidude1 = src.getLatitude() * (Math.PI / 180);
-        double latidude2 = dst.getLatitude() * (Math.PI / 180);
-
-        double longitude1 = src.getLongitude() * (Math.PI / 180);
-        double longitude2 = dst.getLongitude() * (Math.PI / 180);
-
-        double latitudeDiff = latidude1 - latidude2;
-        double longitudeDiff = longitude1 - longitude2;
-
-        double a = Math.pow(Math.sin(latitudeDiff / 2) , 2)
-                + Math.cos(latidude1) * Math.cos(latidude2)
-                * Math.pow(Math.sin(longitudeDiff / 2) , 2);
-
-        double c = 2 * Math.atan2(Math.sqrt(a) , Math.sqrt(1-a));
-
-        return R * c;
+        // Use the new helper!
+        return calculateRawHaversine(src.getLatitude(), src.getLongitude(),
+                dst.getLatitude(), dst.getLongitude());
     }
 
 
@@ -803,26 +883,18 @@ public class Graph {
         return vertices.toString();
     }
 
-    static class myNode implements Comparable<myNode> {
-        int index;
-        double distance;
-
-        myNode(int index, double distance) {
-            this.index = index;
-            this.distance = distance;
-        }
-
-        @Override
-        public int compareTo(myNode other) {
-            return Double.compare(this.distance, other.distance);
-        }
-    }
-    // Add this to Graph.java
     public int getVertexCount() {
         return vertices.size();
     }
 
     public Vertex getVertex(int index) {
         return vertices.get(index);
+    }
+
+    private record SearchNode(int index, double gScore, double fScore) implements Comparable<SearchNode> {
+        @Override
+        public int compareTo(SearchNode other) {
+            return Double.compare(this.fScore, other.fScore);
+        }
     }
 }

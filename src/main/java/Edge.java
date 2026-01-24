@@ -1,13 +1,13 @@
 public class Edge {
     // Fields
-    private Long sourceId;     // optional field (can be null)
+    private Long sourceId;
     private long destinationId;
     private double distance;
 
 
     private Graph.HighwayType highwayType;
     /**
-     * Constructor: takes source node ID, destination node ID, and the distance.
+     * Constructor: takes source node ID, destination node ID, and the distance
      */
     public Edge(long sourceId, long destinationId, double distance) {
         this.sourceId = sourceId;
@@ -24,7 +24,7 @@ public class Edge {
     }
 
     /**
-     * Copy constructor (equivalent to C++: Edge(const Edge& other)).
+     * Copy constructor
      */
     public Edge(Edge other) {
         this.sourceId = other.sourceId;
@@ -32,7 +32,7 @@ public class Edge {
         this.distance = other.distance;
     }
 
-    // ---------- Getters ----------
+    // Getters
     public Long getSourceId() {
         return sourceId;
     }
@@ -45,7 +45,7 @@ public class Edge {
         return distance;
     }
 
-    // ---------- Setters ----------
+    // Setters
     public void setSourceId(Long sourceId) {
         this.sourceId = sourceId;
     }
